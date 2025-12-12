@@ -1,18 +1,21 @@
 import { Page, Locator, expect, FrameLocator } from '@playwright/test';
+import { BasePage } from './BasePage';
 
-export class ContactFormPage {
-  readonly page: Page;
+export class ContactFormPage extends BasePage {
   readonly formFrame: FrameLocator;
   readonly firstNameInput: Locator;
   readonly lastNameInput: Locator;
   readonly companyInput: Locator;
   readonly emailInput: Locator;
   readonly submitButton: Locator;
-  readonly errorMessages: Locator;
+  readonly firstNameError: Locator;
+  readonly lastNameError: Locator;
+  readonly companyError: Locator;
+  readonly emailError: Locator;
   readonly getstartedFormContainer: Locator;
 
   constructor(page: Page) {
-    this.page = page;
+    super(page);
     
     this.formFrame = page.frameLocator('iframe.hs-form-iframe').first();
     
@@ -25,20 +28,21 @@ export class ContactFormPage {
     
     this.submitButton = this.formFrame.locator('input[type="submit"]');
     
-    this.errorMessages = this.formFrame.locator('.hs-error-msgs');
+    this.firstNameError = this.formFrame.locator('.hs_firstname .hs-error-msgs');
+    this.lastNameError = this.formFrame.locator('.hs_lastname .hs-error-msgs');
+    this.companyError = this.formFrame.locator('.hs_company .hs-error-msgs');
+    this.emailError = this.formFrame.locator('.hs_email .hs-error-msgs');
   }
 
-  async waitForFormLoad() {
+  async waitForFormLoad() : Promise<void>{
     try {
-      await this.page.waitForSelector('iframe.hs-form-iframe', { timeout: 15000 });
+      await this.page.waitForSelector('iframe.hs-form-iframe');
       console.log('getstarted form iframes detected');
       
-      await this.page.waitForTimeout(1000);
-      
-      await this.formFrame.locator('form').waitFor({ state: 'visible', timeout: 10000 });
+      await this.formFrame.locator('form').waitFor({ state: 'visible' });
       console.log('Main contact form inside iframe is visible');
       
-      await this.firstNameInput.waitFor({ state: 'visible', timeout: 5000 });
+      await this.firstNameInput.waitFor({ state: 'visible' });
       console.log('Form fields are ready');
     } catch (error) {
       console.error('Error loading getstarted form:', error);
@@ -47,23 +51,19 @@ export class ContactFormPage {
   }
 
   async fillFirstName(firstName: string) : Promise<void> {
-    await this.firstNameInput.waitFor({ state: 'visible' });
-    await this.firstNameInput.fill(firstName);
+    await this.fill(this.firstNameInput, firstName);
   }
 
-  async fillLastName(lastName: string) {
-    await this.lastNameInput.waitFor({ state: 'visible' });
-    await this.lastNameInput.fill(lastName);
+  async fillLastName(lastName: string) : Promise<void> {
+    await this.fill(this.lastNameInput, lastName);
   }
 
-  async fillCompany(company: string) {
-    await this.companyInput.waitFor({ state: 'visible' });
-    await this.companyInput.fill(company);
+  async fillCompany(company: string) : Promise<void> {
+    await this.fill(this.companyInput, company);
   }
 
-  async fillEmail(email: string) {
-    await this.emailInput.waitFor({ state: 'visible' });
-    await this.emailInput.fill(email);
+  async fillEmail(email: string) : Promise<void> {
+    await this.fill(this.emailInput, email);
   }
 
   async fillForm(data: { 
@@ -71,7 +71,7 @@ export class ContactFormPage {
     lastName?: string; 
     company?: string; 
     email?: string 
-  }) {
+  }) : Promise<void>{
     await this.waitForFormLoad();
     
     if (data.firstName !== undefined) {
@@ -86,64 +86,50 @@ export class ContactFormPage {
     if (data.email !== undefined) {
       await this.fillEmail(data.email);
     }
-    
-    await this.page.waitForTimeout(500);
   }
 
-  async submitForm() {
-    await this.submitButton.waitFor({ state: 'visible' });
-    await this.submitButton.click();
-    
-    await this.page.waitForTimeout(1000);
+  async submitForm() : Promise<void>{
+    await this.click(this.submitButton);
   }
 
-  async waitForErrorMessages() {
-    await this.errorMessages.first().waitFor({ state: 'visible', timeout: 5000 });
+  async verifyFirstNameError(expectedMessage: string): Promise<void> {
+    await this.waitForVisible(this.firstNameError);
+    await this.verifyVisible(this.firstNameError);
+    await this.verifyContainsText(this.firstNameError, expectedMessage);
   }
 
-  async getFirstErrorMessage(): Promise<Locator> {
-    await this.waitForErrorMessages();
-    return this.errorMessages.first();
+  async verifyLastNameError(expectedMessage: string): Promise<void> {
+    await this.waitForVisible(this.lastNameError);
+    await this.verifyVisible(this.lastNameError);
+    await this.verifyContainsText(this.lastNameError, expectedMessage);
   }
 
-  async getAllErrorMessages(): Promise<Locator[]> {
-    await this.waitForErrorMessages();
-    return await this.errorMessages.all();
+  async verifyCompanyError(expectedMessage: string): Promise<void> {
+    await this.waitForVisible(this.companyError);
+    await this.verifyVisible(this.companyError);
+    await this.verifyContainsText(this.companyError, expectedMessage);
   }
 
-  async verifyErrorMessageVisible() {
-    await this.waitForErrorMessages();
-    const errorMessage = this.errorMessages.first();
-    await expect(errorMessage).toBeVisible();
+  async verifyEmailError(expectedMessage: string): Promise<void> {
+    await this.waitForVisible(this.emailError);
+    await this.verifyVisible(this.emailError);
+    await this.verifyContainsText(this.emailError, expectedMessage);
   }
 
-  async verifyErrorMessageContains(pattern: string | RegExp) {
-    const errorMessage = await this.getFirstErrorMessage();
-    const errorText = await errorMessage.textContent();
-    if (typeof pattern === 'string') {
-      expect(errorText).toContain(pattern);
-    } else {
-      expect(errorText).toMatch(pattern);
-    }
-    return errorText;
+  async getFirstNameErrorText(): Promise<string | null> {
+    return await this.getText(this.firstNameError);
   }
 
-  async verifyMultipleErrorsExist() {
-    await this.waitForErrorMessages();
-    const errors = await this.getAllErrorMessages();
-    expect(errors.length).toBeGreaterThan(0);
-    await expect(errors[0]).toBeVisible();
-    return errors.length;
+  async getLastNameErrorText(): Promise<string | null> {
+    return await this.getText(this.lastNameError);
   }
 
-  async takeScreenshot(screenshotName: string) {
-    await this.page.screenshot({ 
-      path: `test-results/${screenshotName}`, 
-      fullPage: true 
-    });
+  async getCompanyErrorText(): Promise<string | null> {
+    return await this.getText(this.companyError);
   }
 
-  async close() {
-    await this.page.close();
+  async getEmailErrorText(): Promise<string | null> {
+    return await this.getText(this.emailError);
   }
+
 }

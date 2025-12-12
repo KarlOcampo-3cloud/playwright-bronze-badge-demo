@@ -2,11 +2,9 @@ import { test, expect } from '@playwright/test';
 import { HomePage } from '../pages/HomePage';
 import { FinancialServicesPage } from '../pages/FinancialServicesPage';
 import { ContactFormPage } from '../pages/ContactFormPage';
+import { formTestData, validationMessages } from './testData';
 
 test.describe('3Cloud Form Validation Tests', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.setViewportSize({ width: 1920, height: 1080 });
-  });
 
   test('should validate form with missing required fields', async ({ page }) => {
     const homePage = new HomePage(page);
@@ -15,26 +13,17 @@ test.describe('3Cloud Form Validation Tests', () => {
     await homePage.navigateToFinancialServices();
     
     const financialServicesPage = new FinancialServicesPage(page);
-    const newPage = await financialServicesPage.clickLetsTalkBottom();
+    await financialServicesPage.clickLetsTalkBottom();
     
-    const contactFormPage = new ContactFormPage(newPage);
-    await contactFormPage.fillForm({
-      firstName: '',
-      lastName: 'Doe',
-      company: 'Test Company',
-      email: 'test@example.com'
-    });
+    const contactFormPage = new ContactFormPage(page);
+    await contactFormPage.fillForm(formTestData.missingFirstName);
     
     await contactFormPage.submitForm();
     
-    await contactFormPage.verifyErrorMessageVisible();
-    const errorText = await contactFormPage.verifyErrorMessageContains('Please complete this required field.');
-    
-    await contactFormPage.takeScreenshot('form-validation-first-name-missing.png');
+    await contactFormPage.verifyFirstNameError(validationMessages.requiredField);
+    const errorText = await contactFormPage.getFirstNameErrorText();
     
     console.log('First Name validation error:', errorText);
-    
-    await contactFormPage.close();
   });
   
   test('should validate form with invalid email', async ({ page }) => {
@@ -44,24 +33,17 @@ test.describe('3Cloud Form Validation Tests', () => {
     await homePage.navigateToFinancialServices();
     
     const financialServicesPage = new FinancialServicesPage(page);
-    const newPage = await financialServicesPage.clickLetsTalk();
+    await financialServicesPage.clickLetsTalkBottom();
     
-    const contactFormPage = new ContactFormPage(newPage);
-    await contactFormPage.fillForm({
-      firstName: 'John',
-      lastName: 'Doe',
-      company: 'Test Company',
-      email: 'invalid-email'
-    });
+    const contactFormPage = new ContactFormPage(page);
+    await contactFormPage.fillForm(formTestData.invalidEmail);
     
     await contactFormPage.submitForm();
     
-    await contactFormPage.verifyErrorMessageVisible();
-    const errorText = await contactFormPage.verifyErrorMessageContains('Email must be formatted correctly.');
+    await contactFormPage.verifyEmailError(validationMessages.invalidEmail);
+    const errorText = await contactFormPage.getEmailErrorText();
     
     console.log('Email validation error:', errorText);
-    
-    await contactFormPage.close();
   });
   
   test('should validate form with multiple missing fields', async ({ page }) => {
@@ -71,24 +53,16 @@ test.describe('3Cloud Form Validation Tests', () => {
     await homePage.navigateToFinancialServices();
     
     const financialServicesPage = new FinancialServicesPage(page);
-    const newPage = await financialServicesPage.clickLetsTalk();
+    await financialServicesPage.clickLetsTalkBottom();
     
-    const contactFormPage = new ContactFormPage(newPage);
-    await contactFormPage.fillForm({
-      firstName: '',
-      lastName: '',
-      company: 'Test Company',
-      email: 'test@example.com'
-    });
+    const contactFormPage = new ContactFormPage(page);
+    await contactFormPage.fillForm(formTestData.multipleMissingFields);
     
     await contactFormPage.submitForm();
     
-    const errorCount = await contactFormPage.verifyMultipleErrorsExist();
+    await contactFormPage.verifyFirstNameError(validationMessages.requiredField);
+    await contactFormPage.verifyLastNameError(validationMessages.requiredField);
     
-    await contactFormPage.takeScreenshot('form-validation-multiple-fields-missing.png');
-    
-    console.log(`Number of validation errors: ${errorCount}`);
-    
-    await contactFormPage.close();
+    console.log('Multiple field validation errors verified');
   });
 });

@@ -4,10 +4,13 @@ export default defineConfig({
   testDir: './tests',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
+  timeout: 30000,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
+  
   use: {
+    screenshot: 'only-on-failure',
         video: {
       mode: 'on',
     },
@@ -17,15 +20,16 @@ export default defineConfig({
       }
     },
     trace: 'on-first-retry',
-        launchOptions: {
-      args: ["--start-maximized"],
-    },
   },
 
   projects: [
     {
       name: 'Google Chrome',
-      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
+      use: { 
+        ...devices['Desktop Chrome'], 
+        channel: 'chrome',
+        viewport: { width: 1920, height: 1080 },
+      },
     }
   ],
 });
